@@ -1,4 +1,3 @@
-//
 //  ContentView.swift
 //  Sage & Speak
 //
@@ -6,11 +5,11 @@
 //  Features: affirmations, categories, favorites, streak, week tracker, therapy tab
 //  Built with Swift/SwiftUI. Coded with AI assistance (testing + iteration).
 //
- 
+
 import SwiftUI
- 
+
 // MARK: - Data
- 
+
 let affirmationData: [(text: String, cat: String)] = [
     ("My voice deserves to be heard.",                    "Confidence"),
     ("I speak with power and purpose.",                   "Confidence"),
@@ -38,29 +37,32 @@ let affirmationData: [(text: String, cat: String)] = [
     ("I soften my body and let my voice follow.",         "Calm"),
     ("There is no rush. My words will come.",             "Calm"),
 ]
- 
+
 let catEmoji = ["Confidence":"💪","Fluency":"🗣️","Courage":"🌟","Self-Worth":"🌸","Calm":"🍃"]
- 
+
 // MARK: - App
- 
+
 struct ContentView: View {
- 
-    // Affirmation state
+
+    // Affirmation state — saved permanently with @AppStorage
+    @AppStorage("dailyCount") private var dailyCount = 0
+    @AppStorage("allTime")    private var allTime    = 0
+    @AppStorage("streak")     private var streak     = 0
+
+    // Favorites — saved using UserDefaults since arrays need special handling
+    @State private var favorites: [String] = UserDefaults.standard.stringArray(forKey: "favorites") ?? []
+
     @State private var current      = "Tap below to begin 💕"
     @State private var currentCat   = ""
     @State private var filterCat    = "All"
-    @State private var dailyCount   = 0
-    @State private var allTime      = 0
-    @State private var streak       = 0
-    @State private var favorites: [String] = []
     @State private var weekDays     = ["M":false,"T":false,"W":false,"Th":false,"F":false,"Sa":false,"Su":false]
- 
+
     // Therapy state
     @State private var weekFocus    = ""
     @State private var sessionNote  = ""
     @State private var mood         = "Good 🙂"
     @State private var sessions: [(mood:String, note:String, date:String)] = []
- 
+
     // Colors
     let rD = Color(red:0.55,green:0.22,blue:0.22)
     let rM = Color(red:0.72,green:0.38,blue:0.38)
@@ -71,11 +73,11 @@ struct ContentView: View {
     let sM = Color(red:0.38,green:0.55,blue:0.44)
     let sB = Color(red:0.91,green:0.95,blue:0.92)
     let sT = Color(red:0.40,green:0.52,blue:0.44)
- 
+
     let cats  = ["All","Confidence","Fluency","Courage","Self-Worth","Calm"]
     let moods = ["Great 🌟","Good 🙂","Okay 😐","Hard 😔","Really Hard 💙"]
     let days  = ["M","T","W","Th","F","Sa","Su"]
- 
+
     var body: some View {
         TabView {
             todayTab
@@ -89,7 +91,7 @@ struct ContentView: View {
         }
         .accentColor(rM)
     }
- 
+
     // MARK: - Today Tab
     var todayTab: some View {
         ZStack {
@@ -106,14 +108,14 @@ struct ContentView: View {
                             .font(.custom("Georgia",size:14))
                             .foregroundColor(rT)
                     }.padding(.top,18)
- 
+
                     // Stats
                     HStack(spacing:10) {
                         pill("🔥","\(streak)","streak")
                         pill("✨","\(dailyCount)","today")
                         pill("🌸","\(allTime)","all time")
                     }.padding(.horizontal)
- 
+
                     // Category chips
                     ScrollView(.horizontal,showsIndicators:false) {
                         HStack(spacing:8) {
@@ -131,7 +133,7 @@ struct ContentView: View {
                             }
                         }.padding(.horizontal)
                     }
- 
+
                     // Card
                     ZStack(alignment:.topTrailing) {
                         VStack(spacing:12) {
@@ -151,12 +153,16 @@ struct ContentView: View {
                         .frame(maxWidth:.infinity).padding(28)
                         .background(Color.white.opacity(0.88)).cornerRadius(24)
                         .shadow(color:rM.opacity(0.12),radius:14,y:5)
- 
+
                         Button {
                             if !current.contains("Tap") {
                                 if favorites.contains(current) {
                                     favorites.removeAll{$0==current}
-                                } else { favorites.append(current) }
+                                } else {
+                                    favorites.append(current)
+                                }
+                                // Save favorites to device storage
+                                UserDefaults.standard.set(favorites, forKey: "favorites")
                             }
                         } label: {
                             Image(systemName:favorites.contains(current) ? "heart.fill":"heart")
@@ -165,7 +171,7 @@ struct ContentView: View {
                                 .padding(16)
                         }
                     }.padding(.horizontal)
- 
+
                     // Button
                     Button {
                         let pool = filterCat=="All" ? affirmationData : affirmationData.filter{$0.cat==filterCat}
@@ -188,7 +194,7 @@ struct ContentView: View {
                             .cornerRadius(20)
                             .shadow(color:rM.opacity(0.28),radius:8,y:4)
                     }.padding(.horizontal)
- 
+
                     // Week tracker
                     VStack(spacing:8) {
                         Text("This Week")
@@ -209,7 +215,7 @@ struct ContentView: View {
                     }
                     .padding(14).background(Color.white.opacity(0.72)).cornerRadius(14)
                     .padding(.horizontal)
- 
+
                     Button("Reset today") {
                         dailyCount = 0
                         current    = "Tap below to begin 💕"
@@ -222,7 +228,7 @@ struct ContentView: View {
             }
         }
     }
- 
+
     // MARK: - Favorites Tab
     var favTab: some View {
         NavigationStack {
@@ -246,18 +252,26 @@ struct ContentView: View {
                                 Text(f).font(.custom("Georgia",size:15))
                                     .foregroundColor(Color(red:0.22,green:0.08,blue:0.06))
                                 Spacer()
-                                Button { favorites.removeAll{$0==f} } label: {
+                                Button {
+                                    favorites.removeAll{$0==f}
+                                    // Save updated favorites to device storage
+                                    UserDefaults.standard.set(favorites, forKey: "favorites")
+                                } label: {
                                     Image(systemName:"heart.fill").foregroundColor(rM)
                                 }
                             }.listRowBackground(Color.white.opacity(0.75))
-                        }.onDelete { favorites.remove(atOffsets:$0) }
+                        }.onDelete {
+                            favorites.remove(atOffsets:$0)
+                            // Save after swipe delete too
+                            UserDefaults.standard.set(favorites, forKey: "favorites")
+                        }
                     }
                     .listStyle(.insetGrouped).scrollContentBackground(.hidden)
                 }
             }.navigationTitle("💗 Favorites")
         }
     }
- 
+
     // MARK: - Therapy Tab
     var therapyTab: some View {
         NavigationStack {
@@ -272,7 +286,7 @@ struct ContentView: View {
                             Text("A quiet place to reflect and grow.")
                                 .font(.custom("Georgia",size:14)).foregroundColor(sT)
                         }.padding(.top,8)
- 
+
                         // Weekly focus
                         VStack(alignment:.leading,spacing:8) {
                             Text("🎯 This Week's Focus")
@@ -294,15 +308,15 @@ struct ContentView: View {
                         .padding(16).background(Color.white.opacity(0.68)).cornerRadius(16)
                         .overlay(RoundedRectangle(cornerRadius:16).stroke(sM.opacity(0.25),lineWidth:1))
                         .padding(.horizontal)
- 
+
                         // Log session
                         VStack(alignment:.leading,spacing:10) {
                             Text("📝 Log a Session")
                                 .font(.custom("Georgia",size:16)).bold().foregroundColor(sD)
- 
+
                             Text("How are you feeling?")
                                 .font(.custom("Georgia",size:13)).foregroundColor(sT)
- 
+
                             ScrollView(.horizontal,showsIndicators:false) {
                                 HStack(spacing:8) {
                                     ForEach(moods,id:\.self) { m in
@@ -317,10 +331,10 @@ struct ContentView: View {
                                     }
                                 }
                             }
- 
+
                             Text("Session notes")
                                 .font(.custom("Georgia",size:13)).foregroundColor(sT)
- 
+
                             ZStack(alignment:.topLeading) {
                                 if sessionNote.isEmpty {
                                     Text("What came up? What did you work on?")
@@ -334,7 +348,7 @@ struct ContentView: View {
                                     .scrollContentBackground(.hidden).lineSpacing(4)
                             }
                             .padding(10).background(Color.white.opacity(0.75)).cornerRadius(12)
- 
+
                             Button {
                                 let f = DateFormatter(); f.dateStyle = .medium
                                 sessions.insert((mood:mood,note:sessionNote,date:f.string(from:Date())),at:0)
@@ -351,7 +365,7 @@ struct ContentView: View {
                         .padding(16).background(Color.white.opacity(0.68)).cornerRadius(16)
                         .overlay(RoundedRectangle(cornerRadius:16).stroke(sM.opacity(0.25),lineWidth:1))
                         .padding(.horizontal)
- 
+
                         // Past sessions
                         if !sessions.isEmpty {
                             VStack(alignment:.leading,spacing:10) {
@@ -388,7 +402,7 @@ struct ContentView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
     }
- 
+
     // MARK: - Progress Tab
     var progressTab: some View {
         NavigationStack {
@@ -407,21 +421,21 @@ struct ContentView: View {
                         .frame(maxWidth:.infinity).padding(.vertical,24)
                         .background(Color.white.opacity(0.75)).cornerRadius(20)
                         .padding(.horizontal)
- 
+
                         LazyVGrid(columns:[GridItem(.flexible()),GridItem(.flexible())],spacing:12) {
                             statCard("🌸","\(allTime)","Total Affirmations")
                             statCard("✨","\(dailyCount)","Today")
                             statCard("💗","\(favorites.count)","Favorited")
                             statCard("🍃","\(sessions.count)","Sessions Logged")
                         }.padding(.horizontal)
- 
+
                         Spacer(minLength:28)
                     }.padding(.top,16)
                 }
             }.navigationTitle("📊 My Progress")
         }
     }
- 
+
     // MARK: - Helper Views
     func pill(_ icon:String,_ val:String,_ label:String) -> some View {
         VStack(spacing:3) {
@@ -432,7 +446,7 @@ struct ContentView: View {
         .frame(maxWidth:.infinity).padding(.vertical,11)
         .background(Color.white.opacity(0.75)).cornerRadius(14)
     }
- 
+
     func statCard(_ icon:String,_ val:String,_ label:String) -> some View {
         VStack(spacing:6) {
             Text(icon).font(.system(size:26))
@@ -444,7 +458,7 @@ struct ContentView: View {
         .background(Color.white.opacity(0.75)).cornerRadius(16)
     }
 }
- 
+
 #Preview {
     ContentView()
 }
