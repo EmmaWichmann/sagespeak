@@ -1,282 +1,434 @@
-// Sage & Speak, web version
-// Mirrors the original SwiftUI app's data and behavior, saved with localStorage
-// instead of @AppStorage/UserDefaults.
-
-const affirmationData = [
-  ["My voice deserves to be heard.", "Confidence"],
-  ["I speak with power and purpose.", "Confidence"],
-  ["I am a confident communicator.", "Confidence"],
-  ["Every word I speak matters.", "Confidence"],
-  ["I own every room I walk into.", "Confidence"],
-  ["I can speak at my own pace.", "Fluency"],
-  ["I do not need to rush my words.", "Fluency"],
-  ["Pausing is a sign of thoughtfulness.", "Fluency"],
-  ["My voice flows more freely every day.", "Fluency"],
-  ["Every conversation is a chance to grow.", "Fluency"],
-  ["I am brave enough to use my voice.", "Courage"],
-  ["I choose courage over silence.", "Courage"],
-  ["I show up fully, voice and all.", "Courage"],
-  ["Being heard is worth the vulnerability.", "Courage"],
-  ["I face difficult conversations with grace.", "Courage"],
-  ["I am more than my stutter.", "Self-Worth"],
-  ["My worth is not how smoothly I speak.", "Self-Worth"],
-  ["I deserve to be in every conversation.", "Self-Worth"],
-  ["I am whole, worthy, and enough.", "Self-Worth"],
-  ["I am proud of how far I have come.", "Self-Worth"],
-  ["I breathe deeply and speak from calm.", "Calm"],
-  ["My breath is my anchor.", "Calm"],
-  ["I am grounded, steady, and present.", "Calm"],
-  ["I soften my body and let my voice follow.", "Calm"],
-  ["There is no rush. My words will come.", "Calm"],
-];
-
-const catEmoji = { "Confidence": "💪", "Fluency": "🗣️", "Courage": "🌟", "Self-Worth": "🌸", "Calm": "🍃" };
-const cats = ["All", "Confidence", "Fluency", "Courage", "Self-Worth", "Calm"];
-const moods = ["Great 🌟", "Good 🙂", "Okay 😐", "Hard 😔", "Really Hard 💙"];
-const dayKeys = ["M", "T", "W", "Th", "F", "Sa", "Su"];
-const dayFromJsWeekday = ["Su", "M", "T", "W", "Th", "F", "Sa"]; // JS getDay(): 0=Sun
-
-// ---- state, loaded from localStorage ----
-function load(key, fallback) {
-  try {
-    const v = localStorage.getItem(key);
-    return v === null ? fallback : JSON.parse(v);
-  } catch { return fallback; }
+:root {
+  --r-deep: #8C3838;
+  --r-mid: #B86161;
+  --r-soft: #E08A7A;
+  --r-bg: #FCF0E8;
+  --r-bg2: #F5E4DB;
+  --r-text: #996157;
+  --s-deep: #38614D;
+  --s-mid: #618C70;
+  --s-bg: #E8F2EB;
+  --s-bg2: #E1EFE6;
+  --s-text: #668570;
+  --ink: #391414;
+  --font-display: "Cormorant Garamond", serif;
+  --font-ui: "Inter", sans-serif;
 }
-function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
-
-let state = {
-  dailyCount: load("dailyCount", 0),
-  allTime: load("allTime", 0),
-  streak: load("streak", 0),
-  favorites: load("favorites", []),
-  weekDays: load("weekDays", { M: false, T: false, W: false, Th: false, F: false, Sa: false, Su: false }),
-  weekFocus: load("weekFocus", ""),
-  sessions: load("sessions", []), // {mood, note, date}
-  current: load("current", ""),
-  currentCat: load("currentCat", ""),
-};
-
-let filterCat = "All";
-let selectedMood = moods[1];
-
-// ---- element refs ----
-const el = (id) => document.getElementById(id);
-const affirmationText = el("affirmationText");
-const catTag = el("catTag");
-const heartBtn = el("heartBtn");
-const chipRow = el("chipRow");
-const moodRow = el("moodRow");
-const weekRow = el("weekRow");
-
-// ---- render helpers ----
-function renderStats() {
-  el("streakVal").textContent = state.streak;
-  el("dailyVal").textContent = state.dailyCount;
-  el("allTimeVal").textContent = state.allTime;
-  el("progressStreak").textContent = state.streak;
-  el("statAllTime").textContent = state.allTime;
-  el("statToday").textContent = state.dailyCount;
-  el("statFav").textContent = state.favorites.length;
-  el("statSessions").textContent = state.sessions.length;
+ 
+* { box-sizing: border-box; }
+ 
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  background: radial-gradient(circle at 50% 0%, #f6ece6, #ece3dd 70%);
+  font-family: var(--font-ui);
+  padding: 60px 16px;
 }
-
-function renderChips() {
-  chipRow.innerHTML = "";
-  cats.forEach((c) => {
-    const btn = document.createElement("button");
-    btn.className = "chip" + (filterCat === c ? " active" : "");
-    btn.textContent = (c !== "All" ? catEmoji[c] + " " : "") + c;
-    btn.addEventListener("click", () => { filterCat = c; renderChips(); });
-    chipRow.appendChild(btn);
-  });
+ 
+.page-layout {
+  display: flex;
+  align-items: center;
+  gap: 56px;
+  max-width: 1100px;
 }
-
-function renderMoodChips() {
-  moodRow.innerHTML = "";
-  moods.forEach((m) => {
-    const btn = document.createElement("button");
-    btn.className = "chip mood-chip" + (selectedMood === m ? " active" : "");
-    btn.textContent = m;
-    btn.addEventListener("click", () => { selectedMood = m; renderMoodChips(); });
-    moodRow.appendChild(btn);
-  });
+ 
+.story-panel {
+  width: 380px;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.6);
+  border-left: 3px solid var(--r-mid);
+  border-radius: 4px 20px 20px 4px;
+  padding: 36px 34px;
 }
-
-function renderAffirmation() {
-  if (!state.current) {
-    affirmationText.textContent = "Tap below to begin 💕";
-    catTag.hidden = true;
-  } else {
-    affirmationText.textContent = state.current;
-    if (state.currentCat) {
-      catTag.hidden = false;
-      catTag.textContent = (catEmoji[state.currentCat] || "") + " " + state.currentCat;
-    } else {
-      catTag.hidden = true;
-    }
-  }
-  const isFav = state.favorites.includes(state.current) && state.current !== "";
-  heartBtn.classList.toggle("active", isFav);
+.story-kicker {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--r-mid);
+  margin: 0 0 8px;
 }
-
-function renderWeek() {
-  weekRow.innerHTML = "";
-  dayKeys.forEach((d) => {
-    const col = document.createElement("div");
-    col.className = "day-col";
-    const done = !!state.weekDays[d];
-    col.innerHTML = `<span class="day-name">${d}</span><span class="day-dot${done ? " done" : ""}">${done ? "✓" : ""}</span>`;
-    weekRow.appendChild(col);
-  });
+.story-heading {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--r-deep);
+  margin: 0 0 20px;
+  line-height: 1.25;
 }
-
-function renderFavorites() {
-  const list = el("favList");
-  const empty = el("favEmpty");
-  list.innerHTML = "";
-  if (state.favorites.length === 0) {
-    empty.style.display = "block";
-    list.style.display = "none";
-    return;
-  }
-  empty.style.display = "none";
-  list.style.display = "flex";
-  state.favorites.forEach((f) => {
-    const li = document.createElement("li");
-    li.className = "fav-item";
-    li.innerHTML = `<span>🌸</span><span class="fav-text">${escapeHtml(f)}</span>`;
-    const removeBtn = document.createElement("button");
-    removeBtn.className = "fav-remove";
-    removeBtn.innerHTML = "♥";
-    removeBtn.addEventListener("click", () => {
-      state.favorites = state.favorites.filter((x) => x !== f);
-      save("favorites", state.favorites);
-      renderFavorites(); renderAffirmation(); renderStats();
-    });
-    li.appendChild(removeBtn);
-    list.appendChild(li);
-  });
+.story-text {
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--ink);
+  margin: 0 0 16px;
 }
-
-function renderSessions() {
-  const card = el("pastSessionsCard");
-  const wrap = el("sessionsList");
-  wrap.innerHTML = "";
-  if (state.sessions.length === 0) { card.hidden = true; return; }
-  card.hidden = false;
-  state.sessions.forEach((s) => {
-    const div = document.createElement("div");
-    div.className = "session-entry";
-    div.innerHTML = `
-      <div class="session-top"><span>${escapeHtml(s.mood)}</span><span class="session-date">${escapeHtml(s.date)}</span></div>
-      ${s.note ? `<p class="session-note">${escapeHtml(s.note)}</p>` : ""}
-    `;
-    wrap.appendChild(div);
-  });
+.story-closer {
+  font-style: italic;
+  color: var(--r-text);
 }
-
-function escapeHtml(str) {
-  const d = document.createElement("div");
-  d.textContent = str;
-  return d.innerHTML;
+.story-signature {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--r-mid);
+  margin-top: 22px;
 }
-
-// ---- actions ----
-function newAffirmation() {
-  const pool = filterCat === "All" ? affirmationData : affirmationData.filter((a) => a[1] === filterCat);
-  const pick = pool[Math.floor(Math.random() * pool.length)];
-  state.current = pick[0];
-  state.currentCat = pick[1];
-  state.dailyCount += 1;
-  state.allTime += 1;
-  if (state.streak === 0) state.streak = 1;
-  const key = dayFromJsWeekday[new Date().getDay()];
-  state.weekDays[key] = true;
-
-  save("current", state.current);
-  save("currentCat", state.currentCat);
-  save("dailyCount", state.dailyCount);
-  save("allTime", state.allTime);
-  save("streak", state.streak);
-  save("weekDays", state.weekDays);
-
-  renderAffirmation(); renderStats(); renderWeek();
+ 
+@media (max-width: 900px) {
+  .page-layout { flex-direction: column; gap: 40px; }
+  .story-panel { width: 100%; max-width: 392px; box-sizing: border-box; order: 2; }
 }
-
-function toggleHeart() {
-  if (!state.current) return;
-  if (state.favorites.includes(state.current)) {
-    state.favorites = state.favorites.filter((x) => x !== state.current);
-  } else {
-    state.favorites.push(state.current);
-  }
-  save("favorites", state.favorites);
-  renderAffirmation(); renderFavorites(); renderStats();
+ 
+.phone-outer {
+  position: relative;
+  width: 392px;
+  height: 830px;
+  padding: 18px;
+  background: linear-gradient(155deg, #3a3a3d, #1a1a1c 40%, #050505);
+  border-radius: 66px;
+  box-shadow:
+    0 50px 90px -20px rgba(50, 25, 15, 0.45),
+    0 15px 35px -10px rgba(50, 25, 15, 0.3),
+    inset 0 0 0 1px rgba(255,255,255,0.08);
 }
-
-function resetToday() {
-  state.dailyCount = 0;
-  state.current = "";
-  state.currentCat = "";
-  state.weekDays = { M: false, T: false, W: false, Th: false, F: false, Sa: false, Su: false };
-  save("dailyCount", 0); save("current", ""); save("currentCat", ""); save("weekDays", state.weekDays);
-  renderAffirmation(); renderStats(); renderWeek();
+ 
+.phone-outer::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 63px;
+  border: 1px solid rgba(255,255,255,0.06);
+  pointer-events: none;
 }
-
-function saveSession() {
-  const note = el("sessionNote").value.trim();
-  const date = new Date().toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-  state.sessions.unshift({ mood: selectedMood, note, date });
-  save("sessions", state.sessions);
-  el("sessionNote").value = "";
-  renderSessions(); renderStats();
+ 
+.side-btn {
+  position: absolute;
+  background: linear-gradient(90deg, #26262a, #0c0c0e);
+  z-index: 0;
 }
-
-// ---- tab switching ----
-function initTabs() {
-  const panels = document.querySelectorAll(".tab-panel");
-  const buttons = document.querySelectorAll(".tab-btn");
-  buttons.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const target = btn.dataset.tab;
-      panels.forEach((p) => p.classList.toggle("active", p.dataset.panel === target));
-      buttons.forEach((b) => b.classList.toggle("active", b === btn));
-    });
-  });
+.side-btn.mute { right: -3px; top: 128px; width: 3px; height: 32px; border-radius: 2px 0 0 2px; }
+.side-btn.vol-up { left: -3px; top: 168px; width: 3px; height: 52px; border-radius: 0 2px 2px 0; }
+.side-btn.vol-down { left: -3px; top: 230px; width: 3px; height: 52px; border-radius: 0 2px 2px 0; }
+.side-btn.power { right: -3px; top: 200px; width: 3px; height: 78px; border-radius: 2px 0 0 2px; }
+ 
+.phone {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  border-radius: 50px;
+  overflow: hidden;
 }
-
-// ---- status bar clock ----
-function updateClock() {
-  const clockEl = el("statusTime");
-  if (!clockEl) return;
-  const now = new Date();
-  let h = now.getHours();
-  const m = now.getMinutes();
-  h = h % 12; if (h === 0) h = 12;
-  clockEl.textContent = h + ":" + String(m).padStart(2, "0");
+ 
+.island {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 30px;
+  background: #000;
+  border-radius: 20px;
+  z-index: 30;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
 }
-
-// ---- wire up ----
-function init() {
-  updateClock();
-  setInterval(updateClock, 15000);
-  initTabs();
-  renderChips();
-  renderMoodChips();
-  renderAffirmation();
-  renderStats();
-  renderWeek();
-  renderFavorites();
-  renderSessions();
-
-  el("weekFocus").value = state.weekFocus;
-  el("weekFocus").addEventListener("input", (e) => { state.weekFocus = e.target.value; save("weekFocus", state.weekFocus); });
-
-  el("newAffirmationBtn").addEventListener("click", newAffirmation);
-  heartBtn.addEventListener("click", toggleHeart);
-  el("resetTodayBtn").addEventListener("click", resetToday);
-  el("saveSessionBtn").addEventListener("click", saveSession);
+ 
+.status-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  z-index: 25;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  pointer-events: none;
 }
-
-init();
+.status-bar .time { letter-spacing: 0.2px; }
+.status-bar .icons { display: flex; align-items: center; gap: 5px; }
+ 
+.home-indicator {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 134px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--ink);
+  opacity: 0.35;
+  z-index: 30;
+}
+ 
+.screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50px;
+  overflow: hidden;
+  background: var(--r-bg);
+}
+ 
+.tab-panel {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+.tab-panel.active { display: block; }
+ 
+.today-bg, .therapy-bg {
+  height: 100%;
+  background: linear-gradient(to bottom, var(--r-bg), var(--r-bg2));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.therapy-bg { background: linear-gradient(to bottom, var(--s-bg), var(--s-bg2)); }
+ 
+.app-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+ 
+.nav-title {
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 62px 0 8px;
+  color: var(--r-deep);
+  flex-shrink: 0;
+}
+.nav-title.sage-title { color: var(--s-deep); }
+ 
+.scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 58px 18px 100px;
+  scrollbar-width: none;
+}
+.scroll-area::-webkit-scrollbar { display: none; }
+ 
+.fav-panel .scroll-area { padding-top: 4px; padding-bottom: 100px; }
+.therapy-panel .scroll-area,
+.progress-panel .scroll-area { padding-top: 4px; padding-bottom: 100px; }
+ 
+.app-header { text-align: center; padding-top: 4px; margin-bottom: 18px; }
+.app-header h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 25px;
+  color: var(--r-deep);
+  margin: 0 0 4px;
+}
+.app-header h1.sage-h1 { color: var(--s-deep); }
+.tagline { font-family: var(--font-display); font-size: 14px; color: var(--r-text); margin: 0; }
+.tagline.sage-tagline { color: var(--s-text); }
+ 
+.pill-row { display: flex; gap: 10px; margin-bottom: 16px; }
+.pill {
+  flex: 1;
+  background: rgba(255,255,255,0.75);
+  border-radius: 14px;
+  padding: 11px 4px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.pill-icon { font-size: 15px; }
+.pill-val { font-family: var(--font-display); font-weight: 700; font-size: 20px; color: var(--r-deep); }
+.pill-label { font-size: 10px; color: var(--r-text); }
+ 
+.chip-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 16px;
+  scrollbar-width: none;
+}
+.chip-row::-webkit-scrollbar { display: none; }
+ 
+.chip {
+  flex-shrink: 0;
+  border: none;
+  padding: 7px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  background: rgba(184,97,97,0.12);
+  color: var(--r-mid);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.chip.active { background: var(--r-mid); color: #fff; }
+.chip.mood-chip { background: rgba(97,140,112,0.12); color: var(--s-mid); }
+.chip.mood-chip.active { background: var(--s-mid); color: #fff; }
+ 
+.card-wrap { position: relative; margin-bottom: 16px; }
+.affirmation-card {
+  background: rgba(255,255,255,0.88);
+  border-radius: 24px;
+  padding: 26px 22px;
+  min-height: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  box-shadow: 0 10px 24px rgba(184,97,97,0.12);
+}
+.cat-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--r-mid);
+  background: rgba(184,97,97,0.1);
+  padding: 3px 12px;
+  border-radius: 20px;
+}
+.affirmation-text {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--ink);
+  line-height: 1.4;
+  margin: 0;
+}
+.heart-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  border: none;
+  background: none;
+  color: rgba(140,140,140,0.4);
+  padding: 12px;
+  cursor: pointer;
+}
+.heart-btn.active { color: var(--r-mid); }
+.heart-btn.active svg path { fill: currentColor; }
+ 
+.primary-btn {
+  width: 100%;
+  border: none;
+  border-radius: 20px;
+  padding: 15px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 17px;
+  color: #fff;
+  background: linear-gradient(to right, var(--r-mid), var(--r-soft));
+  box-shadow: 0 8px 18px rgba(184,97,97,0.28);
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+.primary-btn.sage-btn { background: linear-gradient(to right, var(--s-deep), var(--s-mid)); box-shadow: none; margin-bottom: 0; }
+ 
+.week-tracker { background: rgba(255,255,255,0.72); border-radius: 14px; padding: 13px; margin-bottom: 8px; }
+.section-label { font-family: var(--font-display); font-weight: 700; font-size: 13px; color: var(--r-text); margin: 0 0 8px; }
+.section-label.sage-label { color: var(--s-text); }
+.week-row { display: flex; gap: 5px; justify-content: space-between; }
+.day-col { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+.day-name { font-size: 11px; font-weight: 600; color: var(--r-text); }
+.day-dot { width: 28px; height: 28px; border-radius: 50%; background: #E1CFC8; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 700; }
+.day-dot.done { background: var(--r-mid); }
+ 
+.text-link { display: block; margin: 10px auto 0; background: none; border: none; font-size: 13px; color: rgba(153,97,87,0.65); cursor: pointer; }
+ 
+.empty-state { text-align: center; padding-top: 90px; }
+.empty-icon { font-size: 48px; margin: 0 0 6px; }
+.empty-title { font-family: var(--font-display); font-size: 17px; color: var(--r-text); margin: 0 0 6px; }
+.empty-sub { font-family: var(--font-display); font-size: 13px; color: var(--r-text); padding: 0 30px; margin: 0; }
+ 
+.fav-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.fav-item { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.75); border-radius: 12px; padding: 12px 14px; }
+.fav-text { flex: 1; font-family: var(--font-display); font-size: 14px; color: var(--ink); }
+.fav-remove { border: none; background: none; color: var(--r-mid); cursor: pointer; padding: 4px; }
+ 
+.therapy-card { background: rgba(255,255,255,0.68); border-radius: 16px; padding: 16px; margin-bottom: 14px; border: 1px solid rgba(97,140,112,0.25); }
+.mini-label { font-size: 13px; color: var(--s-text); margin: 8px 0 6px; font-family: var(--font-display); }
+textarea {
+  width: 100%;
+  min-height: 70px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.75);
+  padding: 10px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--s-deep);
+  resize: none;
+}
+textarea:focus { outline: 2px solid var(--s-mid); }
+ 
+#sessionsList { display: flex; flex-direction: column; gap: 8px; }
+.session-entry { background: rgba(255,255,255,0.75); border-radius: 12px; padding: 10px 12px; }
+.session-top { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--s-mid); margin-bottom: 4px; }
+.session-date { font-family: var(--font-display); font-size: 12px; color: var(--s-text); font-weight: 400; }
+.session-note { font-family: var(--font-display); font-size: 13px; color: var(--s-deep); margin: 0; }
+ 
+.streak-card { text-align: center; background: rgba(255,255,255,0.75); border-radius: 20px; padding: 26px 0; margin-bottom: 14px; }
+.streak-icon { font-size: 42px; margin: 0; }
+.streak-num { font-family: var(--font-display); font-weight: 700; font-size: 46px; color: var(--r-mid); margin: 2px 0; }
+.streak-label { font-size: 14px; color: var(--r-text); margin: 0; }
+ 
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stat-card { background: rgba(255,255,255,0.75); border-radius: 16px; padding: 16px 6px; display: flex; flex-direction: column; align-items: center; gap: 5px; text-align: center; }
+.stat-icon { font-size: 22px; }
+.stat-val { font-family: var(--font-display); font-weight: 700; font-size: 24px; color: var(--r-mid); }
+.stat-label { font-size: 11px; color: var(--r-text); }
+ 
+.tab-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: space-around;
+  padding: 10px 4px 24px;
+  background: rgba(252, 240, 232, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 0.5px solid rgba(140, 56, 56, 0.15);
+  z-index: 40;
+}
+.tab-btn {
+  background: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  color: #a89a94;
+  font-size: 10px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.tab-btn.active { color: var(--r-mid); }
+ 
+.hint { font-size: 12px; color: #a68f86; font-family: var(--font-ui); text-align: center; max-width: 320px; }
+ 
+@media (max-width: 440px) {
+  .phone-outer { width: 100%; max-width: 392px; height: 84vh; padding: 14px; border-radius: 54px; }
+  .phone, .screen { border-radius: 40px; }
+}
