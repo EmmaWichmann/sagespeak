@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sage &amp; Speak</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="phone-outer">
+    <div class="side-btn mute"></div>
+    <div class="side-btn vol-up"></div>
+    <div class="side-btn vol-down"></div>
+    <div class="side-btn power"></div>
+
+    <div class="phone">
+      <div class="status-bar">
+        <span class="time" id="statusTime">9:41</span>
+        <span class="icons">
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="none"><rect x="0" y="6" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="4.5" y="4" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="9" y="2" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="13.5" y="0" width="3" height="11" rx="0.5" fill="currentColor"/></svg>
+          <svg width="15" height="11" viewBox="0 0 15 11" fill="none"><path d="M7.5 10.5c.6 0 1-.5 1-1s-.5-1-1-1-1 .5-1 1 .4 1 1 1zM4 6.3c1-1 2.3-1.5 3.5-1.5s2.5.5 3.5 1.5M1.5 3.6C3.3 1.9 5.3 1 7.5 1s4.2.9 6 2.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/></svg>
+          <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x="0.5" y="0.5" width="20" height="10" rx="2.5" stroke="currentColor"/><rect x="2" y="2" width="17" height="7" rx="1.5" fill="currentColor"/><rect x="21.5" y="3.5" width="1.5" height="4" rx="0.7" fill="currentColor"/></svg>
+        </span>
+      </div>
+      <div class="island"></div>
+
+      <div class="screen" id="screen">
+
+      <!-- TODAY TAB -->
+      <section class="tab-panel today-panel active" data-panel="today">
+        <div class="today-bg">
+          <div class="scroll-area">
+
+            <header class="app-header">
+              <h1>🌸 Sage &amp; Speak</h1>
+              <p class="tagline">Your voice. Your power. Your pace.</p>
+            </header>
+
+            <div class="pill-row">
+              <div class="pill"><span class="pill-icon">🔥</span><span class="pill-val" id="streakVal">0</span><span class="pill-label">streak</span></div>
+              <div class="pill"><span class="pill-icon">✨</span><span class="pill-val" id="dailyVal">0</span><span class="pill-label">today</span></div>
+              <div class="pill"><span class="pill-icon">🌸</span><span class="pill-val" id="allTimeVal">0</span><span class="pill-label">all time</span></div>
+            </div>
+
+            <div class="chip-row" id="chipRow"></div>
+
+            <div class="card-wrap">
+              <div class="affirmation-card">
+                <div class="cat-tag" id="catTag" hidden></div>
+                <p class="affirmation-text" id="affirmationText">Tap below to begin 💕</p>
+              </div>
+              <button class="heart-btn" id="heartBtn" aria-label="Favorite this affirmation">
+                <svg viewBox="0 0 24 24" width="22" height="22"><path id="heartPath" d="M12 21s-7.5-4.6-10.1-9.3C0.4 8.7 1.6 5 5.1 4.1 7.3 3.5 9.6 4.6 12 7.4c2.4-2.8 4.7-3.9 6.9-3.3 3.5.9 4.7 4.6 3.2 7.6C19.5 16.4 12 21 12 21z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+              </button>
+            </div>
+
+            <button class="primary-btn" id="newAffirmationBtn">New Affirmation ✨</button>
+
+            <div class="week-tracker">
+              <p class="section-label">This Week</p>
+              <div class="week-row" id="weekRow"></div>
+            </div>
+
+            <button class="text-link" id="resetTodayBtn">Reset today</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAVORITES TAB -->
+      <section class="tab-panel fav-panel" data-panel="favorites">
+        <div class="today-bg">
+          <div class="nav-title">💗 Favorites</div>
+          <div class="scroll-area" id="favEmptyWrap">
+            <div class="empty-state" id="favEmpty">
+              <p class="empty-icon">🤍</p>
+              <p class="empty-title">No favorites yet</p>
+              <p class="empty-sub">Tap the heart on any affirmation to save it here.</p>
+            </div>
+            <ul class="fav-list" id="favList"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- THERAPY TAB -->
+      <section class="tab-panel therapy-panel" data-panel="therapy">
+        <div class="therapy-bg">
+          <div class="nav-title sage-title">Therapy Space</div>
+          <div class="scroll-area">
+            <header class="app-header">
+              <h1 class="sage-h1">🍃 Therapy Space</h1>
+              <p class="tagline sage-tagline">A quiet place to reflect and grow.</p>
+            </header>
+
+            <div class="therapy-card">
+              <p class="section-label sage-label">🎯 This Week's Focus</p>
+              <textarea id="weekFocus" placeholder="e.g. Slowing down before I speak..."></textarea>
+            </div>
+
+            <div class="therapy-card">
+              <p class="section-label sage-label">📝 Log a Session</p>
+              <p class="mini-label">How are you feeling?</p>
+              <div class="chip-row" id="moodRow"></div>
+              <p class="mini-label">Session notes</p>
+              <textarea id="sessionNote" placeholder="What came up? What did you work on?"></textarea>
+              <button class="primary-btn sage-btn" id="saveSessionBtn">Save Session 🍃</button>
+            </div>
+
+            <div class="therapy-card" id="pastSessionsCard" hidden>
+              <p class="section-label sage-label">Past Sessions</p>
+              <div id="sessionsList"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PROGRESS TAB -->
+      <section class="tab-panel progress-panel" data-panel="progress">
+        <div class="today-bg">
+          <div class="nav-title">📊 My Progress</div>
+          <div class="scroll-area">
+            <div class="streak-card">
+              <p class="streak-icon">🔥</p>
+              <p class="streak-num" id="progressStreak">0</p>
+              <p class="streak-label">day streak</p>
+            </div>
+            <div class="stat-grid">
+              <div class="stat-card"><span class="stat-icon">🌸</span><span class="stat-val" id="statAllTime">0</span><span class="stat-label">Total Affirmations</span></div>
+              <div class="stat-card"><span class="stat-icon">✨</span><span class="stat-val" id="statToday">0</span><span class="stat-label">Today</span></div>
+              <div class="stat-card"><span class="stat-icon">💗</span><span class="stat-val" id="statFav">0</span><span class="stat-label">Favorited</span></div>
+              <div class="stat-card"><span class="stat-icon">🍃</span><span class="stat-val" id="statSessions">0</span><span class="stat-label">Sessions Logged</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      </div>
+
+      <nav class="tab-bar">
+        <button class="tab-btn active" data-tab="today">
+          <svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span>Today</span>
+        </button>
+        <button class="tab-btn" data-tab="favorites">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 21s-7.5-4.6-10.1-9.3C0.4 8.7 1.6 5 5.1 4.1 7.3 3.5 9.6 4.6 12 7.4c2.4-2.8 4.7-3.9 6.9-3.3 3.5.9 4.7 4.6 3.2 7.6C19.5 16.4 12 21 12 21z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+          <span>Favorites</span>
+        </button>
+        <button class="tab-btn" data-tab="therapy">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M6 3c-2 4-2 9 1 13 2.5 3.3 7 4 9 2M6 3c4 0 8 2 9 6 1 4-1 8-4 9M6 3c1 5 4 9 9 9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span>Therapy</span>
+        </button>
+        <button class="tab-btn" data-tab="progress">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 20V10M11 20V4M18 20v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span>Progress</span>
+        </button>
+      </nav>
+
+      <div class="home-indicator"></div>
+    </div>
+  </div>
+
+  <p class="hint">Sage &amp; Speak, a web version built to match the original app.</p>
+
+<script src="script.js"></script>
+</body>
+</html>
